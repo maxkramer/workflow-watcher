@@ -4,6 +4,7 @@ import (
 	"flag"
 	wfclientset "github.com/argoproj/argo/pkg/client/clientset/versioned"
 	"github.com/argoproj/argo/pkg/client/informers/externalversions"
+	"github.com/project-interstellar/workflow-watcher/internal"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -29,7 +30,7 @@ func main() {
 		externalversions.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.ResourceVersion = *resourceVersion
 		})).Argoproj().V1alpha1().Workflows().Informer()
-	informer.AddEventHandler(WorkflowEventHandler{})
+	informer.AddEventHandler(internal.WorkflowEventHandler{})
 
 	stopper := make(chan struct{})
 	configureGracefulExit(stopper)

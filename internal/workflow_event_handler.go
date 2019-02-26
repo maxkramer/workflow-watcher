@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"

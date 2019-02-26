@@ -1,0 +1,43 @@
+version: 2
+workspace-name: &working_directory /go/src/github.com/project-interstellar/workflow-watcher
+
+machine:
+  timezone: Europe/Berlin
+jobs:
+  build:
+    docker:
+      - image: golang:1.11.5-alpine
+    working_directory: *working_directory
+    steps:
+      - checkout
+      - attach_workspace:
+          at: *working_directory
+      - restore_cache:
+          keys:
+            - glide-dependencies-{{ checksum "glide.lock" }}
+            - glide-dependencies-
+      - run:
+          name: Install dependencies
+          command: |
+            apk -U --no-cache add git curl
+            curl https://glide.sh/get | sh
+            glide install
+      - run:
+          name: Build
+          command: go build -o workflow-watcher ./cmd
+      - save_cache:
+          paths:
+            - vendor
+          key: glide-dependencies-{{ checksum "glide.lock" }}
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - workflow-watcher
+      - store_artifacts:
+          path: workflow-watcher
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
