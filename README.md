@@ -20,7 +20,10 @@ The API is then able to process these event changes asychronously, simply nack'i
 
 This whole approach is an attempt to introduce fault-tolerance on the API level, into an async design pattern.
 
-## Local Testing
+Checkpointing will be implemented using the `resourceVersion` on Kubernetes API objects to continue from where it left off and to ensure that no events are missed. A simple cache will be used, ideally a k8s config map with a single key will be written to on termination, but Redis or equiv could also be used. Just seems a bit over the top for storing a single key value pair.
+
+
+## Running the watcher
 Simply run `go build -o workflow-watcher ./cmd` to build the binary, which can then be run locally.
 
 The binary supports two flags:
@@ -31,6 +34,8 @@ The binary supports two flags:
 $ ./workflow-watcher -kubeconfig $HOME/.kube/config
 ```
 
+![example output][4]
+
 ## Todo:
 
 - Implement an abstract queueing interface and initial adaptor for GCP PubSub
@@ -40,3 +45,4 @@ $ ./workflow-watcher -kubeconfig $HOME/.kube/config
 [1]: https://github.com/argoproj/argo
 [2]: https://i.imgur.com/pfbmvd7.png
 [3]: https://medium.com/firehydrant-io/stay-informed-with-kubernetes-informers-4fda2a21da9e
+[4]: https://i.imgur.com/04fR74b.png
