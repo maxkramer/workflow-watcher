@@ -39,6 +39,7 @@ $ ./workflow-watcher -kubeconfig $HOME/.kube/config
 ## Todo:
 
 - Implement an abstract queueing interface and initial adaptor for GCP PubSub
+- Implement an abstract storage interface for managing the resourceVersion (esp between deploys)
 - Write tests
 
 
