@@ -14,21 +14,21 @@ jobs:
           at: *working_directory
       - restore_cache:
           keys:
-            - glide-dependencies-{{ checksum "glide.lock" }}
-            - glide-dependencies-
+            - go-dependencies-{{ checksum "Gopkg.lock" }}
+            - go-dependencies-
       - run:
           name: Install dependencies
           command: |
             apk -U --no-cache add git curl
-            curl https://glide.sh/get | sh
-            glide install
+            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+            dep ensure
       - run:
           name: Build
           command: go build -o workflow-watcher ./cmd
       - save_cache:
           paths:
             - vendor
-          key: glide-dependencies-{{ checksum "glide.lock" }}
+          key: go-dependencies-{{ checksum "Gopkg.lock" }}
       - persist_to_workspace:
           root: ./
           paths:

@@ -17,7 +17,7 @@ type PubSub struct {
 }
 
 
-func (pubSub PubSub) Append(workflow *v1alpha1.Workflow) *error {
+func (pubSub PubSub) Publish(workflow *v1alpha1.Workflow) *error {
 	message := pubSub.MessageFactory.NewMessage(workflow)
 	serializedMessage, _ := json.Marshal(message)
 

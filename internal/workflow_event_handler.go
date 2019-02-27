@@ -34,7 +34,7 @@ func (handler WorkflowEventHandler) handleWorkflowChange(eventType watch.EventTy
 }
 
 func (handler WorkflowEventHandler) pushWorkflowToQueue(workflow *v1alpha1.Workflow) {
-	err := handler.Queue.Append(workflow)
+	err := handler.Queue.Publish(workflow)
 	if *err != nil {
 		handler.Log.Error("Failed to add event to queue", *err)
 	}
