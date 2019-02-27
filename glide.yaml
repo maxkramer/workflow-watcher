@@ -5,3 +5,5 @@ import:
 - package: github.com/sirupsen/logrus
 - package: github.com/argoproj/argo/apis/workflow/v1alpha1
 - package: github.com/argoproj/argo/apis/client
+- package: github.com/DataDog/datadog-go/statsd
+- package: cloud.google.com/go/pubsub

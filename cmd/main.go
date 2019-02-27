@@ -5,7 +5,8 @@ import (
 	wfclientset "github.com/argoproj/argo/pkg/client/clientset/versioned"
 	"github.com/argoproj/argo/pkg/client/informers/externalversions"
 	"github.com/project-interstellar/workflow-watcher/internal"
-	log "github.com/sirupsen/logrus"
+	"github.com/project-interstellar/workflow-watcher/pkg"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -18,6 +19,8 @@ import (
 var (
 	kubeconfig      = flag.String("kubeconfig", "", "(optional) absolute path to the kubeconfig file")
 	resourceVersion = flag.String("resourceVersion", "", "(optional) the resource version to begin listening from")
+	logLevel        = flag.String("logLevel", "debug", "(optional) log level")
+	log             = logrus.New()
 )
 
 func main() {
@@ -30,7 +33,9 @@ func main() {
 		externalversions.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.ResourceVersion = *resourceVersion
 		})).Argoproj().V1alpha1().Workflows().Informer()
-	informer.AddEventHandler(internal.WorkflowEventHandler{})
+
+	pubsub := pkg.PubSub{Log: log}
+	informer.AddEventHandler(internal.WorkflowEventHandler{Log: log, Queue: pubsub})
 
 	stopper := make(chan struct{})
 	configureGracefulExit(stopper)
@@ -55,15 +60,14 @@ func configureGracefulExit(stopper chan struct{}) {
 }
 
 func configureLogger() {
-	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.JSONFormatter{})
-
-	// Output to stdout instead of the default stderr
-	// Can be any io.Writer, see below for File example
-	log.SetOutput(os.Stdout)
-
-	// Only log the warning severity or above.
-	log.SetLevel(log.DebugLevel)
+	log.Formatter = &logrus.JSONFormatter{}
+	log.Out = os.Stdout
+	level, err := logrus.ParseLevel(*logLevel)
+	if err == nil {
+		log.SetLevel(level)
+	} else {
+		log.SetLevel(logrus.DebugLevel)
+	}
 }
 
 func loadKubernetesConfiguration() *rest.Config {
