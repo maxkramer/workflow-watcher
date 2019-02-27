@@ -7,3 +7,4 @@ import:
 - package: github.com/argoproj/argo/apis/client
 - package: github.com/DataDog/datadog-go/statsd
 - package: cloud.google.com/go/pubsub
+- package: github.com/google/uuid
