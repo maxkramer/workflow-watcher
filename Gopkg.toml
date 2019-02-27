@@ -1,0 +1,14 @@
+[[constraint]]
+  name = "k8s.io/client-go"
+
+[[constraint]]
+  name = "github.com/sirupsen/logrus"
+
+[[constraint]]
+  name = "github.com/argoproj/argo"
+
+[[constraint]]
+  name = "cloud.google.com/go"
+
+[[constraint]]
+  name = "github.com/google/uuid"

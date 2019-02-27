@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	wfclientset "github.com/argoproj/argo/pkg/client/clientset/versioned"
 	"github.com/argoproj/argo/pkg/client/informers/externalversions"
@@ -34,7 +35,7 @@ func main() {
 			options.ResourceVersion = *resourceVersion
 		})).Argoproj().V1alpha1().Workflows().Informer()
 
-	pubsub := pkg.PubSub{Log: log, MessageFactory: pkg.WorkflowChangedMessageFactory{}}
+	pubsub := pkg.PubSub{Log: log, MessageFactory: pkg.WorkflowChangedMessageFactory{}, Ctx: context.Background(), ProjectId: "", TopicName: ""}
 	informer.AddEventHandler(internal.WorkflowEventHandler{Log: log, Queue: pubsub})
 
 	stopper := make(chan struct{})
