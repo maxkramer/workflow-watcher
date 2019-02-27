@@ -13,7 +13,6 @@ type WorkflowEventHandler struct {
 }
 
 func (handler WorkflowEventHandler) OnAdd(obj interface{}) {
-
 	handler.handleWorkflowChange(watch.Added, obj.(*v1alpha1.Workflow))
 }
 

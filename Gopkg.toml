@@ -1,14 +1,13 @@
 [[constraint]]
   name = "k8s.io/client-go"
-  branch = "release-7.0"
+
+[[constraint]]
+  name = "github.com/argoproj/argo"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
   version = "~1.3.0"
-
-[[constraint]]
-  name = "github.com/argoproj/argo"
-  version = "~2.2.1"
 
 [[constraint]]
   name = "cloud.google.com/go"
@@ -20,5 +19,9 @@
 
 [prune]
   go-tests = true
-  unused-packages = true
   non-go = true
+  unused-packages = true
+
+  [[prune.project]]
+    name = "github.com/argoproj/argo"
+    unused-packages = false # Unused packages contains k8s generated models in the Argo project
