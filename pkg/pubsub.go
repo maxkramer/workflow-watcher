@@ -10,7 +10,7 @@ import (
 type PubSub struct {
 	Log *logrus.Logger
 	ctx context.Context
-	messageFactory WorkflowChangedMessageFactory
+	MessageFactory MessageFactory
 }
 
 

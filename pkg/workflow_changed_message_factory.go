@@ -8,7 +8,7 @@ import (
 
 type WorkflowChangedMessageFactory struct{}
 
-func (factory WorkflowChangedMessageFactory) NewMessage(workflow *v1alpha1.Workflow) WorkflowChangedMessage {
+func (factory WorkflowChangedMessageFactory) NewMessage(workflow *v1alpha1.Workflow) interface{} {
 	return WorkflowChangedMessage{
 		Id:         uuid.MustParse(workflow.GetObjectMeta().GetName()),
 		EventType:  watch.Added,
