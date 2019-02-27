@@ -1,37 +1,33 @@
 package pkg
 
 import (
+	"cloud.google.com/go/pubsub"
 	"context"
 	"encoding/json"
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/api/option"
 )
 
 type PubSub struct {
 	Log *logrus.Logger
-	ctx context.Context
+	Ctx context.Context
 	MessageFactory MessageFactory
+	ProjectId string
 }
 
 
-func (pubsub PubSub) Append(workflow *v1alpha1.Workflow) *error {
-	message := pubsub.messageFactory.NewMessage(workflow)
+func (pubSub PubSub) Append(workflow *v1alpha1.Workflow) *error {
+	message := pubSub.MessageFactory.NewMessage(workflow)
+	serializedMessage, _ := json.Marshal(message)
 
-	res, _ := json.Marshal(message)
-	pubsub.Log.Debug(string(res))
+	client, err := pubsub.NewClient(pubSub.Ctx, pubSub.ProjectId, option.WithCredentialsFile("/Users/kramer_max/.config/gcloud/interstellar-admin.json"))
+	if err != nil {
+		return &err
+	}
 
-	// Sets your Google Cloud Platform project ID.
-	//projectID := "interstellar-staging-env"
-	//
-	//// Creates a client.
-	//client, err := gpubsub.NewClient(pubsub.ctx, projectID)
-	//if err != nil {
-	//	return &err
-	//}
-	//
-	//topic := client.Topic("")
-	//
-	//gpubsub.Message{Data:}
-	//topic.Publish(pubsub.ctx)
+	topic := client.Topic("some-topic")
+
+	_, err = topic.Publish(pubSub.Ctx, &pubsub.Message{Data: serializedMessage})
 	return nil
 }

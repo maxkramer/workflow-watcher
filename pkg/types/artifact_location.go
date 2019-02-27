@@ -1,4 +1,4 @@
-package pkg
+package types
 
 type ArtifactLocation struct {
 	Bucket string `json:"bucket"`

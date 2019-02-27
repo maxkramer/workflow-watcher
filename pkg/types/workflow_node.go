@@ -1,4 +1,4 @@
-package pkg
+package types
 
 import (
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"

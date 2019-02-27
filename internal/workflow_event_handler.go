@@ -30,5 +30,12 @@ func (handler WorkflowEventHandler) handleWorkflowChange(eventType watch.EventTy
 	handler.Log.Debugf("Object's name %s resourceVersion %s", workflow.GetObjectMeta().GetName(),
 		workflow.GetObjectMeta().GetResourceVersion())
 
-	go handler.Queue.Append(workflow)
+	go handler.pushWorkflowToQueue(workflow)
+}
+
+func (handler WorkflowEventHandler) pushWorkflowToQueue(workflow *v1alpha1.Workflow) {
+	err := handler.Queue.Append(workflow)
+	if err != nil {
+		handler.Log.Error("Failed to add event to queue", err)
+	}
 }

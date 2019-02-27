@@ -8,3 +8,4 @@ import:
 - package: github.com/DataDog/datadog-go/statsd
 - package: cloud.google.com/go/pubsub
 - package: github.com/google/uuid
+- package: "golang.org/x/oauth2/google"
