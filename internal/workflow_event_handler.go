@@ -12,7 +12,7 @@ import (
 type WorkflowEventHandler struct {
 	Log    *logrus.Logger
 	Queue  pkg.Queue
-	statsd *statsd.Client
+	Statsd *statsd.Client
 }
 
 func (handler WorkflowEventHandler) OnAdd(obj interface{}) {
@@ -37,7 +37,7 @@ func (handler WorkflowEventHandler) handleWorkflowChange(eventType watch.EventTy
 }
 
 func (handler WorkflowEventHandler) incrementCounter(name string) {
-	err := handler.statsd.Count(name, 1, nil, 1)
+	err := handler.Statsd.Count(name, 1, nil, 1)
 	if err != nil {
 		handler.Log.Errorf("Error incrementing %s counter", name)
 	}
