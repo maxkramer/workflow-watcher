@@ -117,6 +117,22 @@
   version = "v0.18.0"
 
 [[projects]]
+  digest = "1:513691cf6809d4fa2482469adb88aba530f96a5c4a9c68a09a0786519b07c24a"
+  name = "github.com/go-redis/redis"
+  packages = [
+    ".",
+    "internal",
+    "internal/consistenthash",
+    "internal/hashtag",
+    "internal/pool",
+    "internal/proto",
+    "internal/util",
+  ]
+  pruneopts = "NUT"
+  revision = "d22fde8721cc915a55aeb6b00944a76a92bfeb6e"
+  version = "v6.15.2"
+
+[[projects]]
   digest = "1:a6afc27b2a73a5506832f3c5a1c19a30772cb69e7bd1ced4639eb36a55db224f"
   name = "github.com/gogo/protobuf"
   packages = [
@@ -660,6 +676,7 @@
     "github.com/argoproj/argo/pkg/apis/workflow/v1alpha1",
     "github.com/argoproj/argo/pkg/client/clientset/versioned",
     "github.com/argoproj/argo/pkg/client/informers/externalversions",
+    "github.com/go-redis/redis",
     "github.com/google/uuid",
     "github.com/sirupsen/logrus",
     "k8s.io/apimachinery/pkg/apis/meta/v1",

@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
-	"github.com/project-interstellar/workflow-watcher/pkg"
+	"github.com/project-interstellar/workflow-watcher/pkg/queue"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/watch"
+	"strings"
 )
 
 type WorkflowEventHandler struct {
-	Log    *logrus.Logger
-	Queue  pkg.Queue
-	Statsd *statsd.Client
+	Log                    *logrus.Logger
+	Queue                  queue.Queue
+	Statsd                 *statsd.Client
+	ResourceVersionChannel chan string
 }
 
 func (handler WorkflowEventHandler) OnAdd(obj interface{}) {
@@ -32,7 +34,7 @@ func (handler WorkflowEventHandler) handleWorkflowChange(eventType watch.EventTy
 	handler.Log.Debugf("Object's name %s resourceVersion %s", workflow.GetObjectMeta().GetName(),
 		workflow.GetObjectMeta().GetResourceVersion())
 
-	handler.incrementCounter(fmt.Sprintf("event-handler.%s", eventType))
+	handler.incrementCounter(fmt.Sprintf("event-handler.%s", strings.ToLower(string(eventType))))
 	handler.pushWorkflowToQueue(workflow)
 }
 
@@ -51,4 +53,6 @@ func (handler WorkflowEventHandler) pushWorkflowToQueue(workflow *v1alpha1.Workf
 	} else {
 		handler.incrementCounter("queue.success")
 	}
+
+	handler.ResourceVersionChannel <- workflow.ResourceVersion
 }

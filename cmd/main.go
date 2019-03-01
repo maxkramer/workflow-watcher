@@ -3,14 +3,16 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	datadog "github.com/DataDog/datadog-go/statsd"
 	wfclientset "github.com/argoproj/argo/pkg/client/clientset/versioned"
 	"github.com/argoproj/argo/pkg/client/informers/externalversions"
 	"github.com/project-interstellar/workflow-watcher/internal"
 	"github.com/project-interstellar/workflow-watcher/pkg"
+	"github.com/project-interstellar/workflow-watcher/pkg/queue"
+	"github.com/project-interstellar/workflow-watcher/pkg/storage"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
@@ -20,11 +22,12 @@ import (
 )
 
 var (
-	kubeconfig      = flag.String("kubeconfig", "", "(optional) absolute path to the kubeconfig file")
-	resourceVersion = flag.String("resourceVersion", "", "(optional) the resource version to begin listening from")
-	logLevel        = flag.String("logLevel", "debug", "(optional) log level")
-	statsdAddress   = flag.String("statsd-address", "0.0.0.0:8125", "(optional) statsd address")
-	log             = logrus.New()
+	kubeconfig    = flag.String("kubeconfig", "", "(optional) absolute path to the kubeconfig file")
+	logLevel      = flag.String("logLevel", "debug", "(optional) log level")
+	statsdAddress = flag.String("statsd-address", "127.0.0.1:8125", "(optional) statsd address")
+	log           = logrus.New()
+	redisAddress  = flag.String("redis-address", "localhost:6379", "(optional) redis address")
+	redisPassword = flag.String("redis-password", "", "(optional) redis password")
 )
 
 func configureStatsdClient() *datadog.Client {
@@ -33,12 +36,12 @@ func configureStatsdClient() *datadog.Client {
 		panic("Failed to create statsd client " + err.Error())
 	}
 
+	statsd.Namespace = "com.maxkramer.workflow-watcher."
 	err = statsd.Count("start", 1, nil, 1)
 	if err != nil {
 		log.Error("Failed to increment statsd counter `start`")
 	}
 
-	statsd.Namespace = "com.maxkramer.workflow-watcher"
 	return statsd
 }
 
@@ -47,21 +50,56 @@ func main() {
 	flag.Parse()
 
 	statsd := configureStatsdClient()
+	stopper := make(chan struct{})
+	configureGracefulExit(stopper, statsd)
+
 	config := loadKubernetesConfiguration()
 
 	wfClient := wfclientset.NewForConfigOrDie(config)
 
-	pubsub := pkg.PubSub{Log: log, MessageFactory: pkg.WorkflowChangedMessageFactory{}, Ctx: context.Background(), ProjectId: "", TopicName: ""}
+	redis := storage.NewRedis(*redisAddress, *redisPassword)
+	resourceVersion, redisErr := redis.Get("resourceVersion")
+	if redisErr != nil {
+		log.Error("Failed to fetch resourceVersion from Redis ", redisErr)
+		resourceVersion = ""
+	}
+
+	log.Infof("Starting informer with resourceVersion \"%s\"", resourceVersion)
+
+	pubsub := queue.PubSub{Log: log, MessageFactory: pkg.WorkflowChangedMessageFactory{}, Ctx: context.Background(), ProjectId: "", TopicName: ""}
 	informer := externalversions.NewSharedInformerFactoryWithOptions(wfClient, 10*time.Minute,
 		externalversions.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.ResourceVersion = *resourceVersion
-			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", "minikube").String()
+			options.ResourceVersion = resourceVersion.(string)
 		})).Argoproj().V1alpha1().Workflows().Informer()
-	informer.AddEventHandler(internal.WorkflowEventHandler{Log: log, Queue: pubsub, Statsd: statsd})
 
-	stopper := make(chan struct{})
-	configureGracefulExit(stopper, statsd)
+	resourceVersionChannel := make(chan string)
+	defer close(resourceVersionChannel)
+
+	informer.AddEventHandler(internal.WorkflowEventHandler{Log: log, Queue: pubsub, Statsd: statsd, ResourceVersionChannel: resourceVersionChannel})
+	go listenToResourceVersionUpdates(resourceVersionChannel, redis, statsd)
+
 	informer.Run(stopper)
+}
+
+func listenToResourceVersionUpdates(channel chan string, redis *storage.Redis, statsd *datadog.Client) {
+	for resourceVersion := range channel {
+		log.Debugf("Updating resourceVersion in Redis to %s", resourceVersion)
+		err := redis.Set("resourceVersion", resourceVersion)
+		if err != nil {
+			statsdErr := statsd.Count("redis.resource-version.write-error", 1, nil, 1)
+			if statsdErr != nil {
+				log.Error("Failed writing redis.resource-version.write-error to statsd ", statsdErr)
+			}
+			log.Error("Error setting resourceVersion in Redis", err)
+		} else {
+			statsdErr := statsd.Count("redis.resource-version.write-success", 1, nil, 1)
+			if statsdErr != nil {
+				log.Error("Failed writing redis.resource-version.write-success to statsd ", statsdErr)
+			}
+		}
+	}
+
+	log.Debug("Channel closed. Stopped listening to resourceVersion changes")
 }
 
 func configureGracefulExit(stopper chan struct{}, statsd *datadog.Client) {
@@ -71,12 +109,11 @@ func configureGracefulExit(stopper chan struct{}, statsd *datadog.Client) {
 
 	go func() {
 		sig := <-gracefulStop
-		close(stopper)
 
 		log.Warnf("caught sig: %+v", sig)
 		log.Debugf("Flushing statsd client")
 
-		statsdErr := statsd.Count("exit", 1, nil, 1)
+		statsdErr := statsd.Count(fmt.Sprintf("stop.%+v", sig), 1, nil, 1)
 		if statsdErr != nil {
 			log.Error("Failed to increment statsd exit counter ", statsdErr)
 		}
@@ -91,9 +128,13 @@ func configureGracefulExit(stopper chan struct{}, statsd *datadog.Client) {
 			log.Error("Failed to close statsd client ", statsdErr)
 		}
 
-		log.Debug("Wait for 2 second to finish processing")
+		log.Debug("Stopping informer")
+		stopper <- struct{}{}
 
+		log.Debug("Beginning 5 second grace-period to finish processing")
 		time.Sleep(5 * time.Second)
+		log.Debug("Grace-period ended")
+
 		os.Exit(0)
 	}()
 }

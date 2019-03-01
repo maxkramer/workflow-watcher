@@ -29,3 +29,7 @@
   [[prune.project]]
     name = "github.com/argoproj/argo"
     unused-packages = false # Unused packages contains k8s generated models in the Argo project
+
+[[constraint]]
+  name = "github.com/go-redis/redis"
+  version = "6.15.2"

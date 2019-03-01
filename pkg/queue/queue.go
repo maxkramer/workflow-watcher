@@ -1,4 +1,4 @@
-package pkg
+package queue
 
 import "github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
 

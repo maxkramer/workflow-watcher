@@ -55,7 +55,7 @@ func (factory WorkflowChangedMessageFactory) parseNodes(workflowName string, sta
 				FinishedAt:    status.FinishedAt,
 			}
 
-			if status.Outputs.HasOutputs() {
+			if status.Outputs != nil && status.Outputs.HasOutputs() {
 				node.Logs = factory.parseArtifact(types.Logs, status.Outputs.Artifacts)
 				node.Input = factory.parseArtifact(types.Input, status.Outputs.Artifacts)
 				node.Output = factory.parseArtifact(types.Output, status.Outputs.Artifacts)
