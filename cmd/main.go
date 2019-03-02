@@ -15,11 +15,11 @@ import (
 	"github.com/argoproj/argo/pkg/client/informers/externalversions"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/project-interstellar/workflow-watcher/internal"
 	"github.com/project-interstellar/workflow-watcher/pkg"
+	"github.com/project-interstellar/workflow-watcher/pkg/metrics"
 	"github.com/project-interstellar/workflow-watcher/pkg/queue"
 	"github.com/project-interstellar/workflow-watcher/pkg/storage"
 )
@@ -34,32 +34,15 @@ var (
 	pubsubTopicId   = flag.String("pubsub-topic-id", "", "(optional) topic id to use for Google PubSub")
 )
 
-func configureStatsdClient() *datadog.Client {
-	statsd, err := datadog.New(*statsdAddress)
-	if err != nil {
-		panic("Failed to create statsd client " + err.Error())
-	}
-
-	statsd.Namespace = "com.maxkramer.workflow-watcher."
-	err = statsd.Count("start", 1, nil, 1)
-	if err != nil {
-		log.Error("Failed to increment statsd counter `start`")
-	}
-
-	return statsd
-}
-
 func main() {
 	configureLogger()
 	flag.Parse()
 
 	statsd := configureStatsdClient()
-	stopper := make(chan struct{})
-	configureGracefulExit(stopper, statsd)
+	stopChannel := make(chan struct{})
+	configureGracefulExit(stopChannel, statsd)
 
-	config := loadKubernetesConfiguration()
-
-	wfClient := wfclientset.NewForConfigOrDie(config)
+	wfClient := createKubernetesClient()
 
 	redis := storage.NewRedis(*redisAddress, *redisPassword)
 	resourceVersion, redisErr := redis.Get("resourceVersion")
@@ -79,10 +62,26 @@ func main() {
 	resourceVersionChannel := make(chan string)
 	defer close(resourceVersionChannel)
 
-	informer.AddEventHandler(internal.NewWorkflowEventHandler(pubsub, statsd, resourceVersionChannel))
+	informer.AddEventHandler(internal.NewWorkflowEventHandler(pubsub, metrics.NewStatsdAgent(statsd),
+		resourceVersionChannel))
 	go listenToResourceVersionUpdates(resourceVersionChannel, redis, statsd)
 
-	informer.Run(stopper)
+	informer.Run(stopChannel)
+}
+
+func configureStatsdClient() *datadog.Client {
+	statsd, err := datadog.New(*statsdAddress)
+	if err != nil {
+		panic("Failed to create statsd client " + err.Error())
+	}
+
+	statsd.Namespace = "com.maxkramer.workflow-watcher."
+	err = statsd.Count("start", 1, nil, 1)
+	if err != nil {
+		log.Error("Failed to increment statsd counter `start`")
+	}
+
+	return statsd
 }
 
 func listenToResourceVersionUpdates(channel chan string, redis *storage.Redis, statsd *datadog.Client) {
@@ -106,7 +105,7 @@ func listenToResourceVersionUpdates(channel chan string, redis *storage.Redis, s
 	log.Debug("Channel closed. Stopped listening to resourceVersion changes")
 }
 
-func configureGracefulExit(stopper chan struct{}, statsd *datadog.Client) {
+func configureGracefulExit(stopChannel chan struct{}, statsd *datadog.Client) {
 	var gracefulStop = make(chan os.Signal)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
@@ -133,7 +132,7 @@ func configureGracefulExit(stopper chan struct{}, statsd *datadog.Client) {
 		}
 
 		log.Debug("Stopping informer")
-		stopper <- struct{}{}
+		stopChannel <- struct{}{}
 
 		log.Debug("Beginning 5 second grace-period to finish processing")
 		time.Sleep(5 * time.Second)
@@ -155,10 +154,11 @@ func configureLogger() {
 	}
 }
 
-func loadKubernetesConfiguration() *rest.Config {
+func createKubernetesClient() *wfclientset.Clientset {
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
 		panic("Unable to create cluster configuration " + err.Error())
 	}
-	return config
+
+	return wfclientset.NewForConfigOrDie(config)
 }

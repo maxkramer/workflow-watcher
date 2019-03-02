@@ -150,6 +150,18 @@
   revision = "44145f04b68cf362d9c4df2182967c2275eaefed"
 
 [[projects]]
+  digest = "1:552a143cfb2692a4a8cbae568a9b4633ec4e7ce9269cfe74c07ea08ce50d866f"
+  name = "github.com/golang/mock"
+  packages = [
+    "gomock",
+    "mockgen",
+    "mockgen/model",
+  ]
+  pruneopts = "NUT"
+  revision = "51421b967af1f557f93a59e0057aaf15ca02e29c"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:20fbcb14466e20006cbbaaef66ff09d98c425c443dda2181f77b0edf1307b64b"
   name = "github.com/golang/protobuf"
   packages = [
@@ -328,12 +340,10 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:8b70a86ec54b516747b4a64b266e638d6141960525dc1640686370f2befd7a50"
+  digest = "1:722749f5de020a4ea8999d54f5033b7a0894184ad93339d6e6948538f977e291"
   name = "github.com/stretchr/testify"
   packages = [
-    ".",
     "assert",
-    "http",
     "mock",
   ]
   pruneopts = "NUT"
@@ -706,12 +716,14 @@
     "github.com/argoproj/argo/pkg/client/clientset/versioned",
     "github.com/argoproj/argo/pkg/client/informers/externalversions",
     "github.com/go-redis/redis",
+    "github.com/golang/mock/gomock",
+    "github.com/golang/mock/mockgen",
     "github.com/google/uuid",
     "github.com/sirupsen/logrus",
-    "github.com/stretchr/testify",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/mock",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/watch",
-    "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
   ]
   solver-name = "gps-cdcl"

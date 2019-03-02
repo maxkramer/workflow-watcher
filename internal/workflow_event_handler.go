@@ -4,38 +4,39 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/DataDog/datadog-go/statsd"
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/watch"
 
+	"github.com/project-interstellar/workflow-watcher/pkg/metrics"
 	"github.com/project-interstellar/workflow-watcher/pkg/queue"
 )
 
 type WorkflowEventHandler struct {
 	queue                  queue.Queue
-	statsd                 *statsd.Client
+	metricsAgent           metrics.Agent
 	resourceVersionChannel chan string
 }
 
-func NewWorkflowEventHandler(queue queue.Queue, statsd *statsd.Client, resourceVersionChannel chan string) *WorkflowEventHandler {
+func NewWorkflowEventHandler(queue queue.Queue, metricsAgent metrics.Agent,
+	resourceVersionChannel chan string) *WorkflowEventHandler {
 	return &WorkflowEventHandler{
 		queue:                  queue,
-		statsd:                 statsd,
+		metricsAgent:           metricsAgent,
 		resourceVersionChannel: resourceVersionChannel,
 	}
 }
 
 func (handler *WorkflowEventHandler) OnAdd(obj interface{}) {
-	go handler.handleWorkflowChange(watch.Added, obj.(*v1alpha1.Workflow))
+	handler.handleWorkflowChange(watch.Added, obj.(*v1alpha1.Workflow))
 }
 
 func (handler *WorkflowEventHandler) OnUpdate(oldObj, newObj interface{}) {
-	go handler.handleWorkflowChange(watch.Modified, newObj.(*v1alpha1.Workflow))
+	handler.handleWorkflowChange(watch.Modified, newObj.(*v1alpha1.Workflow))
 }
 
 func (handler *WorkflowEventHandler) OnDelete(obj interface{}) {
-	go handler.handleWorkflowChange(watch.Deleted, obj.(*v1alpha1.Workflow))
+	handler.handleWorkflowChange(watch.Deleted, obj.(*v1alpha1.Workflow))
 }
 
 func (handler *WorkflowEventHandler) handleWorkflowChange(eventType watch.EventType, workflow *v1alpha1.Workflow) {
@@ -43,25 +44,40 @@ func (handler *WorkflowEventHandler) handleWorkflowChange(eventType watch.EventT
 	log.Debugf("Object's name %s resourceVersion %s", workflow.GetObjectMeta().GetName(),
 		workflow.GetObjectMeta().GetResourceVersion())
 
-	handler.incrementCounter(fmt.Sprintf("event-handler.%s", strings.ToLower(string(eventType))))
+	handler.incrementCounter(metrics.Metric(fmt.Sprintf("event-handler.%s", strings.ToLower(string(eventType)))))
 	handler.pushWorkflowToQueue(workflow, eventType)
+	handler.pushResourceVersion(workflow)
 }
 
-func (handler *WorkflowEventHandler) incrementCounter(name string) {
-	err := handler.statsd.Count(name, 1, nil, 1)
-	if err != nil {
-		log.Errorf("Error incrementing %s counter", name)
+func (handler *WorkflowEventHandler) incrementCounter(name metrics.Metric) {
+	if handler.metricsAgent != nil {
+		err := handler.metricsAgent.IncrementCounter(name, 1)
+		if err != nil {
+			log.Errorf("Error incrementing %s counter", name)
+		}
+	}
+}
+
+func (handler *WorkflowEventHandler) pushResourceVersion(workflow *v1alpha1.Workflow) {
+	if handler.resourceVersionChannel != nil {
+		handler.resourceVersionChannel <- workflow.ResourceVersion
 	}
 }
 
 func (handler *WorkflowEventHandler) pushWorkflowToQueue(workflow *v1alpha1.Workflow, eventType watch.EventType) {
-	err := handler.queue.Publish(workflow, eventType)
-	if err != nil {
-		log.Error("Failed to add event to queue ", err)
-		handler.incrementCounter("queue.failure")
-	} else {
-		handler.incrementCounter("queue.success")
-	}
+	if handler.queue != nil {
+		err := handler.queue.Publish(workflow, eventType)
 
-	handler.resourceVersionChannel <- workflow.ResourceVersion
+		if err != nil {
+			log.Error("Failed to add event to queue ", err)
+		}
+
+		if handler.metricsAgent != nil {
+			if err != nil {
+				handler.incrementCounter(metrics.QueueFailure)
+			} else {
+				handler.incrementCounter(metrics.QueueSuccess)
+			}
+		}
+	}
 }
