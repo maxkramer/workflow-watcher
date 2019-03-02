@@ -2,15 +2,13 @@ package metrics
 
 import (
 	"strings"
-
-	"github.com/DataDog/datadog-go/statsd"
 )
 
 type StatsdAgent struct {
-	client *statsd.Client
+	client statsdClient
 }
 
-func NewStatsdAgent(client *statsd.Client) *StatsdAgent {
+func NewStatsdAgent(client statsdClient) *StatsdAgent {
 	return &StatsdAgent{client: client}
 }
 
