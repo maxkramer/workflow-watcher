@@ -1,9 +1,9 @@
 package types
 
-type ArtifactType int
+type ArtifactType string
 
 const (
-	Input  ArtifactType = 0
-	Output ArtifactType = 1
-	Logs   ArtifactType = 2
+	Input  ArtifactType = "input"
+	Output ArtifactType = "output"
+	Logs   ArtifactType = "logs"
 )

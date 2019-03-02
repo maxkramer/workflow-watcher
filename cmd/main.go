@@ -11,23 +11,25 @@ import (
 	"github.com/project-interstellar/workflow-watcher/pkg"
 	"github.com/project-interstellar/workflow-watcher/pkg/queue"
 	"github.com/project-interstellar/workflow-watcher/pkg/storage"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 )
 
 var (
-	kubeconfig    = flag.String("kubeconfig", "", "(optional) absolute path to the kubeconfig file")
-	logLevel      = flag.String("logLevel", "debug", "(optional) log level")
-	statsdAddress = flag.String("statsd-address", "127.0.0.1:8125", "(optional) statsd address")
-	log           = logrus.New()
-	redisAddress  = flag.String("redis-address", "localhost:6379", "(optional) redis address")
-	redisPassword = flag.String("redis-password", "", "(optional) redis password")
+	kubeconfig      = flag.String("kubeconfig", filepath.Join(os.Getenv("HOME"), ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	logLevel        = flag.String("logLevel", "debug", "(optional) log level")
+	statsdAddress   = flag.String("statsd-address", "0.0.0.0:8125", "(optional) statsd address")
+	redisAddress    = flag.String("redis-address", "0.0.0.0:6379", "(optional) redis address")
+	redisPassword   = flag.String("redis-password", "", "(optional) redis password")
+	pubsubProjectId = flag.String("pubsub-project-id", "", "(optional) project-id to use for Google PubSub")
+	pubsubTopicId   = flag.String("pubsub-topic-id", "", "(optional) topic id to use for Google PubSub")
 )
 
 func configureStatsdClient() *datadog.Client {
@@ -66,7 +68,7 @@ func main() {
 
 	log.Infof("Starting informer with resourceVersion \"%s\"", resourceVersion)
 
-	pubsub := queue.PubSub{Log: log, MessageFactory: pkg.WorkflowChangedMessageFactory{}, Ctx: context.Background(), ProjectId: "", TopicName: ""}
+	pubsub := queue.NewPubSub(context.Background(), pkg.WorkflowChangedMessageFactory{}, *pubsubProjectId, *pubsubTopicId)
 	informer := externalversions.NewSharedInformerFactoryWithOptions(wfClient, 10*time.Minute,
 		externalversions.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.ResourceVersion = resourceVersion.(string)
@@ -75,7 +77,7 @@ func main() {
 	resourceVersionChannel := make(chan string)
 	defer close(resourceVersionChannel)
 
-	informer.AddEventHandler(internal.WorkflowEventHandler{Log: log, Queue: pubsub, Statsd: statsd, ResourceVersionChannel: resourceVersionChannel})
+	informer.AddEventHandler(internal.NewWorkflowEventHandler(pubsub, statsd, resourceVersionChannel))
 	go listenToResourceVersionUpdates(resourceVersionChannel, redis, statsd)
 
 	informer.Run(stopper)
@@ -140,13 +142,14 @@ func configureGracefulExit(stopper chan struct{}, statsd *datadog.Client) {
 }
 
 func configureLogger() {
-	log.Formatter = &logrus.JSONFormatter{}
-	log.Out = os.Stdout
-	level, err := logrus.ParseLevel(*logLevel)
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(os.Stdout)
+
+	level, err := log.ParseLevel(*logLevel)
 	if err == nil {
 		log.SetLevel(level)
 	} else {
-		log.SetLevel(logrus.DebugLevel)
+		log.SetLevel(log.DebugLevel)
 	}
 }
 

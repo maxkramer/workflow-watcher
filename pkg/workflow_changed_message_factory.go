@@ -5,48 +5,28 @@ import (
 	"github.com/google/uuid"
 	"github.com/project-interstellar/workflow-watcher/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"strings"
 )
 
 type WorkflowChangedMessageFactory struct{}
 
-func (factory WorkflowChangedMessageFactory) NewMessage(workflow *v1alpha1.Workflow) interface{} {
+func (factory WorkflowChangedMessageFactory) NewMessage(workflow *v1alpha1.Workflow, eventType watch.EventType) interface{} {
+	name := workflow.GetObjectMeta().GetName()
 	return types.WorkflowChangedMessage{
-		Id:         uuid.MustParse(workflow.GetObjectMeta().GetName()),
-		EventType:  watch.Added,
+		Id:         uuid.MustParse(name),
+		EventType:  eventType,
 		Status:     workflow.Status.Phase,
-		Nodes:      factory.parseNodes(workflow.GetObjectMeta().GetName(), workflow.Status.Nodes),
+		Nodes:      factory.parseNodes(name, workflow.Status.Nodes),
 		StartedAt:  workflow.Status.StartedAt,
 		FinishedAt: workflow.Status.FinishedAt,
 	}
 }
 
-func (WorkflowChangedMessageFactory) parseArtifact(artifactType types.ArtifactType, artifacts []v1alpha1.Artifact) *types.ArtifactLocation {
-	var artifactLocation *v1alpha1.S3Artifact
-	for _, artifact := range artifacts {
-		if artifact.Name == "main-logs" && artifactType == types.Logs {
-			artifactLocation = artifact.S3
-			break
-		} else if artifact.Name == "input" && artifactType == types.Input {
-			artifactLocation = artifact.S3
-			break
-		} else if artifact.Name == "output" && artifactType == types.Output {
-			artifactLocation = artifact.S3
-			break
-		}
-	}
-
-	if artifactLocation == nil {
-		return nil
-	}
-
-	return &types.ArtifactLocation{Bucket: artifactLocation.Bucket, Key: artifactLocation.Key}
-}
-
-func (factory WorkflowChangedMessageFactory) parseNodes(workflowName string, statuses map[string]v1alpha1.NodeStatus) map[string]types.WorkflowNode {
+func (factory *WorkflowChangedMessageFactory) parseNodes(workflowName string, statuses map[string]v1alpha1.NodeStatus) map[string]types.WorkflowNode {
 	phases := make(map[string]types.WorkflowNode)
 
 	for nodeName, status := range statuses {
-		if nodeName != "DAG" && nodeName != "dag" && nodeName != workflowName {
+		if !strings.EqualFold(nodeName, "dag") && nodeName != workflowName {
 			node := types.WorkflowNode{
 				Id:            uuid.MustParse(status.DisplayName),
 				Status:        status.Phase,
@@ -56,9 +36,7 @@ func (factory WorkflowChangedMessageFactory) parseNodes(workflowName string, sta
 			}
 
 			if status.Outputs != nil && status.Outputs.HasOutputs() {
-				node.Logs = factory.parseArtifact(types.Logs, status.Outputs.Artifacts)
-				node.Input = factory.parseArtifact(types.Input, status.Outputs.Artifacts)
-				node.Output = factory.parseArtifact(types.Output, status.Outputs.Artifacts)
+				factory.parseArtifacts(&node, status.Outputs.Artifacts)
 			}
 
 			phases[nodeName] = node
@@ -66,4 +44,22 @@ func (factory WorkflowChangedMessageFactory) parseNodes(workflowName string, sta
 	}
 
 	return phases
+}
+
+func (*WorkflowChangedMessageFactory) parseArtifacts(node *types.WorkflowNode, artifacts []v1alpha1.Artifact) {
+	for _, artifact := range artifacts {
+		if strings.EqualFold(artifact.Name, "main-logs") {
+			node.Logs = &types.ArtifactLocation{
+				Bucket: artifact.S3.Bucket, Key: artifact.S3.Key,
+			}
+		} else if strings.EqualFold(artifact.Name, "input") {
+			node.Input = &types.ArtifactLocation{
+				Bucket: artifact.S3.Bucket, Key: artifact.S3.Key,
+			}
+		} else if strings.EqualFold(artifact.Name, "output") {
+			node.Output = &types.ArtifactLocation{
+				Bucket: artifact.S3.Bucket, Key: artifact.S3.Key,
+			}
+		}
+	}
 }

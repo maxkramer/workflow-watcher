@@ -296,6 +296,14 @@
   version = "v2.0.1"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "NUT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:e256b859ab89f005f2f639f5ed9807d0873d9135e27c6382f419b840ff9abe71"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
@@ -310,6 +318,27 @@
   pruneopts = "NUT"
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
+
+[[projects]]
+  digest = "1:60a46e2410edbf02b419f833372dd1d24d7aa1b916a990a7370e792fada1eadd"
+  name = "github.com/stretchr/objx"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
+  version = "v0.1.1"
+
+[[projects]]
+  digest = "1:8b70a86ec54b516747b4a64b266e638d6141960525dc1640686370f2befd7a50"
+  name = "github.com/stretchr/testify"
+  packages = [
+    ".",
+    "assert",
+    "http",
+    "mock",
+  ]
+  pruneopts = "NUT"
+  revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
+  version = "v1.1.4"
 
 [[projects]]
   digest = "1:daf84293cb0cd57d4b3b12a44f6b3e50fc46c8a362771344564c7b361e25b26e"
@@ -679,6 +708,7 @@
     "github.com/go-redis/redis",
     "github.com/google/uuid",
     "github.com/sirupsen/logrus",
+    "github.com/stretchr/testify",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/watch",
     "k8s.io/client-go/rest",
