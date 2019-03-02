@@ -1,25 +1,27 @@
 package types
 
 import (
-	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
-	"github.com/google/uuid"
-	"github.com/project-interstellar/workflow-watcher/internal/test_utils"
-	"github.com/stretchr/testify/assert"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 	"time"
+
+	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/project-interstellar/workflow-watcher/internal/test_utils"
 )
 
 func TestShouldRenderCorrectJson_WorkflowNode(t *testing.T) {
 	message := WorkflowNode{
-		Id:         uuid.Must(uuid.NewRandom()),
-		Status:     v1alpha1.NodeRunning,
+		Id:            uuid.Must(uuid.NewRandom()),
+		Status:        v1alpha1.NodeRunning,
 		StatusMessage: "message",
-		StartedAt:  meta.Now(),
-		FinishedAt: meta.Now(),
-		Logs: &ArtifactLocation{ Bucket: "bucket", Key: "logs"},
-		Input: &ArtifactLocation{ Bucket: "bucket", Key: "input"},
-		Output: &ArtifactLocation{ Bucket: "bucket", Key: "output"},
+		StartedAt:     meta.Now(),
+		FinishedAt:    meta.Now(),
+		Logs:          &ArtifactLocation{Bucket: "bucket", Key: "logs"},
+		Input:         &ArtifactLocation{Bucket: "bucket", Key: "input"},
+		Output:        &ArtifactLocation{Bucket: "bucket", Key: "output"},
 	}
 
 	res := test_utils.MarshalToMap(t, message)

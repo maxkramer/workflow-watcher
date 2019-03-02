@@ -1,14 +1,16 @@
 package types
 
 import (
+	"testing"
+	"time"
+
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
 	"github.com/google/uuid"
-	"github.com/project-interstellar/workflow-watcher/internal/test_utils"
 	"github.com/stretchr/testify/assert"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"testing"
-	"time"
+
+	"github.com/project-interstellar/workflow-watcher/internal/test_utils"
 )
 
 func TestShouldRenderCorrectJson_WorkflowChangedMessage(t *testing.T) {

@@ -2,12 +2,14 @@ package internal
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
-	"github.com/project-interstellar/workflow-watcher/pkg/queue"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/watch"
-	"strings"
+
+	"github.com/project-interstellar/workflow-watcher/pkg/queue"
 )
 
 type WorkflowEventHandler struct {

@@ -1,11 +1,13 @@
 package pkg
 
 import (
+	"strings"
+
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
 	"github.com/google/uuid"
-	"github.com/project-interstellar/workflow-watcher/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"strings"
+
+	"github.com/project-interstellar/workflow-watcher/pkg/types"
 )
 
 type WorkflowChangedMessageFactory struct{}

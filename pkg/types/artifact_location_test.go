@@ -1,9 +1,11 @@
 package types
 
 import (
-	"github.com/project-interstellar/workflow-watcher/internal/test_utils"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/project-interstellar/workflow-watcher/internal/test_utils"
 )
 
 func TestShouldRenderCorrectJson_ArtifactLocation(t *testing.T) {

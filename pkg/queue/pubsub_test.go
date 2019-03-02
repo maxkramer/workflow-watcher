@@ -2,12 +2,14 @@ package queue
 
 import (
 	"context"
+	"testing"
+
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
-	"github.com/project-interstellar/workflow-watcher/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/watch"
-	"testing"
+
+	"github.com/project-interstellar/workflow-watcher/pkg/types"
 )
 
 type MockMessageFactory struct {

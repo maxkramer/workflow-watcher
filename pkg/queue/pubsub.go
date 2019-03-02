@@ -1,28 +1,30 @@
 package queue
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"encoding/json"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
-	"github.com/project-interstellar/workflow-watcher/pkg"
 	"k8s.io/apimachinery/pkg/watch"
+
+	"github.com/project-interstellar/workflow-watcher/pkg"
 )
 
 type PubSub struct {
 	context        context.Context
 	messageFactory pkg.MessageFactory
-	projectId string
-	topicId string
-	topic *pubsub.Topic
+	projectId      string
+	topicId        string
+	topic          *pubsub.Topic
 }
 
 func NewPubSub(context context.Context, messageFactory pkg.MessageFactory, projectId string, topicId string) *PubSub {
 	return &PubSub{
 		context:        context,
 		messageFactory: messageFactory,
-		projectId: projectId,
-		topicId: topicId,
+		projectId:      projectId,
+		topicId:        topicId,
 	}
 }
 

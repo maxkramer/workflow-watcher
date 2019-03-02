@@ -1,13 +1,15 @@
 package pkg
 
 import (
+	"testing"
+
 	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
 	"github.com/google/uuid"
-	"github.com/project-interstellar/workflow-watcher/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"testing"
+
+	"github.com/project-interstellar/workflow-watcher/pkg/types"
 )
 
 func TestWorkflowChangedMessageFactory_NewMessage_CreatesMessage(t *testing.T) {
